@@ -209,7 +209,7 @@ class VisionAnalyzeBatchService:
 
         response = await client.chat.completions.create(
             model=config.model,
-            max_tokens=config.max_tokens,
+            max_completion_tokens=config.max_tokens,
             messages=[
                 {"role": "system", "content": system_content},
                 {  # pyright: ignore[reportArgumentType]

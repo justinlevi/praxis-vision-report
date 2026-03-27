@@ -1,0 +1,11 @@
+task_id: compile_vision_report
+description: "Synthesize vision analyses into a cohesive blog-post report with embedded images"
+version: "1.0"
+tool:
+  name: compile_vision_report
+  description: "Compile structured vision analyses into markdown and HTML blog-post reports with embedded slide images"
+  category: transform
+  tags: [report, markdown, html, synthesis, vision, llm, blog]
+  examples:
+    - "Compile slide analyses into a conference talk report"
+    - "Generate a markdown blog post from image analysis results"

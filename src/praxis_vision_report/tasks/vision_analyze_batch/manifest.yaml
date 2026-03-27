@@ -1,0 +1,11 @@
+task_id: vision_analyze_batch
+description: "Analyze a batch of images with accumulated transcript context using a vision LLM"
+version: "1.0"
+tool:
+  name: vision_analyze_batch
+  description: "Send batches of images with per-image context to a vision LLM for structured analysis"
+  category: transform
+  tags: [vision, images, llm, analysis, transcript, slides, multimodal]
+  examples:
+    - "Analyze slides from a conference talk with transcript context"
+    - "Process a directory of images with accompanying text"

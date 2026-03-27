@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=78.1.1", "wheel>=0.46.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "praxis-vision-report"
+version = "0.1.0"
+description = "Vision analysis and report generation tasks for Praxis pipelines"
+readme = "README.md"
+authors = [
+    {name = "Justin Winter"}
+]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "structlog",
+    "openai>=1.0",
+    "markdown2>=2.4",
+    "aiofiles>=23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pyright>=1.1",
+]
+
+[project.entry-points."praxis.extensions"]
+vision-report = "praxis_vision_report:register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["praxis_vision_report*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["src", "tests"]

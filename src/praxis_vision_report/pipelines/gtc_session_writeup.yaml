@@ -1,0 +1,75 @@
+id: gtc_session_writeup
+name: GTC Session Writeup
+description: "Generate a comprehensive blog-post-style markdown report for a GTC conference session using vision analysis of slides and transcript"
+
+tool:
+  name: gtc_session_writeup
+  description: "Analyze a GTC conference session video — extract slides, analyze each with transcript context, compile into a detailed markdown+HTML report"
+  category: workflow
+  tags: [gtc, conference, vision, report, slides, transcript, markdown]
+  examples:
+    - "Generate a writeup for a GTC 2026 session"
+    - "Create a blog post from a conference talk video"
+
+params:
+  - name: video_path
+    required: true
+    description: "Absolute path to the session MP4 file"
+    type: string
+  - name: session_title
+    required: true
+    description: "Session title (e.g. 'Agentic AI 101')"
+    type: string
+  - name: segments_path
+    required: true
+    description: "Absolute path to the .segments.json transcript file"
+    type: string
+  - name: session_description
+    required: false
+    description: "Optional session abstract/brief for additional context"
+    type: string
+
+steps:
+  - name: ExtractSlides
+    task: video_slide_extract
+    depends_on: []
+    fail_on_error: true
+    connections:
+      inputs:
+        video_path: "${params.video_path}"
+    config:
+      sample_interval_seconds: 2.0
+      similarity_threshold: 3
+      min_edge_density: 0.02
+      image_format: "png"
+
+  - name: AnalyzeSlides
+    task: vision_analyze_batch
+    depends_on: [ExtractSlides]
+    fail_on_error: true
+    connections:
+      inputs:
+        images_dir: "${ExtractSlides.output_dir}"
+        segments_path: "${params.segments_path}"
+        system_prompt: "You are analyzing slides from a technical conference talk. For each slide, provide a detailed analysis of the content shown — diagrams, code, architecture, key claims, data, and demonstrations. Be thorough and preserve all technical detail."
+        global_context: "${params.session_description}"
+    config:
+      model: "gpt-5.4"
+      detail: "high"
+      max_tokens: 2048
+      concurrency: 5
+
+  - name: CompileReport
+    task: compile_vision_report
+    depends_on: [AnalyzeSlides]
+    fail_on_error: true
+    connections:
+      inputs:
+        analyses: "${AnalyzeSlides.analyses}"
+        title: "${params.session_title}"
+        description: "${params.session_description}"
+    config:
+      model: "gpt-5.4"
+      output_formats: ["markdown", "html"]
+      copy_images: true
+      images_subdir: "slides"

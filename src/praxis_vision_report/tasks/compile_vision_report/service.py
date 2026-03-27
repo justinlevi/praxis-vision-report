@@ -238,12 +238,12 @@ class CompileVisionReportService:
         h3 { font-size: 1.2rem; }
         p { margin: 0.75rem 0; }
         img {
+            width: 100%;
             max-width: 100%;
             height: auto;
             display: block;
-            margin: 1.5rem auto;
+            margin: 1.5em 0;
             border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
         code {
             background: #f4f4f4;

@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import openai
-
 from praxis_vision_report.tasks.compile_vision_report.models import (
     CompileVisionReportConfig,
     CompileVisionReportInput,
@@ -15,12 +13,10 @@ from praxis_vision_report.tasks.compile_vision_report.models import (
 from praxis_vision_report.tasks.compile_vision_report.service import CompileVisionReportService
 
 try:
-    from praxis.observability.artifacts import (  # type: ignore[reportMissingImports]
-        get_current_artifact_context,
-    )
+    from praxis.observability.artifacts import get_current_artifact_context  # type: ignore
 except ImportError:
 
-    def get_current_artifact_context() -> None:  # type: ignore[misc]
+    def get_current_artifact_context() -> None:  # type: ignore
         return None
 
 
@@ -35,7 +31,6 @@ async def run(
     logger.info("CompileVisionReport: Starting for '%s'", input.title)
 
     service = CompileVisionReportService()
-    client = openai.AsyncOpenAI()
 
     # 1. Build synthesis prompt
     prompt = service.build_synthesis_prompt(
@@ -45,17 +40,28 @@ async def run(
         metadata=input.metadata,
     )
 
-    # 2. Call OpenAI to synthesize markdown
+    # 2. Synthesize markdown via Claude
     logger.info(
         "CompileVisionReport: Calling %s to synthesize %d analyses",
         config.model,
         len(input.analyses),
     )
-    markdown_content = await service.synthesize_markdown(
-        client=client,
-        prompt=prompt,
-        model=config.model,
-    )
+    use_mr = config.use_map_reduce and len(input.analyses) >= config.map_reduce_threshold
+    if use_mr:
+        markdown_content = await service.synthesize_map_reduce(
+            analyses=input.analyses,
+            title=input.title,
+            description=input.description,
+            metadata=input.metadata,
+            model=config.model,
+            chunk_size=config.map_reduce_chunk_size,
+        )
+    else:
+        markdown_content = await service.synthesize_markdown(
+            prompt=prompt,
+            model=config.model,
+            slide_count=len(input.analyses),
+        )
 
     # 3. Compute derived values
     safe_title = service.safe_filename(input.title)

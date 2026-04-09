@@ -1,0 +1,9 @@
+task_id: audit_html_report
+name: Audit HTML Report
+description: "Visually audit a rendered HTML report using Claude vision — evaluates image-text correlation, narrative quality, and editorial polish"
+category: transform
+version: "0.1.0"
+input_schema: AuditHtmlReportInput
+output_schema: AuditHtmlReportOutput
+config_schema: AuditHtmlReportConfig
+tags: [audit, html, vision, editorial, claude, anthropic]

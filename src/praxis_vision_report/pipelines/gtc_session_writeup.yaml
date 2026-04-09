@@ -54,10 +54,11 @@ steps:
         system_prompt: "You are analyzing slides from a technical conference talk. For each slide, provide a detailed analysis of the content shown — diagrams, code, architecture, key claims, data, and demonstrations. Be thorough and preserve all technical detail."
         global_context: "${params.session_description}"
     config:
-      model: "gpt-5.4"
-      detail: "high"
-      max_tokens: 2048
+      model: "claude-sonnet-4-6"
       concurrency: 5
+      batch_size: 10
+      filter_stage_shots: true
+      min_slide_interval_seconds: 15.0
 
   - name: CompileReport
     task: compile_vision_report
@@ -69,7 +70,21 @@ steps:
         title: "${params.session_title}"
         description: "${params.session_description}"
     config:
-      model: "gpt-5.4"
+      model: "claude-sonnet-4-6"
       output_formats: ["markdown", "html"]
       copy_images: true
       images_subdir: "slides"
+
+  - name: AuditReport
+    task: audit_html_report
+    depends_on: [CompileReport]
+    fail_on_error: false
+    connections:
+      inputs:
+        markdown_content: "${CompileReport.markdown_content}"
+        analyses: "${AnalyzeSlides.analyses}"
+        title: "${params.session_title}"
+        description: "${params.session_description}"
+    config:
+      model: "claude-sonnet-4-6"
+      max_screenshots: 0

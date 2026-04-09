@@ -1,0 +1,10 @@
+task_id: playwright_screenshot
+name: Playwright Screenshot
+description: "Render a URL or local HTML file in headless Chromium and take evenly-spaced viewport screenshots"
+category: transform
+version: "0.1.0"
+setup_notes: "Requires: pip install playwright && playwright install chromium"
+input_schema: PlaywrightScreenshotInput
+output_schema: PlaywrightScreenshotOutput
+config_schema: PlaywrightScreenshotConfig
+tags: [screenshot, playwright, html, audit, visual, web]

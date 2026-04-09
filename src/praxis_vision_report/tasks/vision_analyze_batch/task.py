@@ -6,8 +6,6 @@ import asyncio
 import logging
 from pathlib import Path
 
-from openai import AsyncOpenAI
-
 from praxis_vision_report.tasks.vision_analyze_batch.models import (
     SlideAnalysis,
     VisionAnalyzeBatchConfig,
@@ -52,6 +50,20 @@ async def run(
 
     # 2. Load slide manifest (for timecode info)
     manifest = service.load_slide_manifest(input.images_dir)
+
+    # 2a. Apply pre-analysis filters (require manifest with timecode data)
+    if manifest:
+        if config.filter_stage_shots and input.images_dir:
+            manifest = service.filter_stage_shots(manifest, Path(input.images_dir))
+        if config.min_slide_interval_seconds > 0.0:
+            manifest = service.filter_by_min_interval(manifest, config.min_slide_interval_seconds)
+
+        # Re-filter images to only those still in the manifest
+        allowed_filenames = {str(e.get("filename", "")) for e in manifest}
+        images = [img for img in images if img.name in allowed_filenames]
+        n = len(images)
+        logger.info(f"VisionAnalyzeBatch: After filtering — {n} images remaining")
+
     manifest_by_filename: dict[str, dict[str, object]] = {}
     if manifest:
         for entry in manifest:
@@ -97,35 +109,44 @@ async def run(
         work_items.append((image, context_text, timecode, timecode_seconds))
 
     # 6. Run analyses concurrently with semaphore
-    client = AsyncOpenAI()
     semaphore = asyncio.Semaphore(config.concurrency)
 
-    async def analyze_one(
-        item: tuple[Path, str, str | None, float | None],
-    ) -> SlideAnalysis:
+    batch_size = config.batch_size
+    batches: list[list[tuple[Path, str, str | None, float | None]]] = [
+        work_items[i : i + batch_size] for i in range(0, len(work_items), batch_size)
+    ]
 
-        image_path, context_text, timecode, timecode_seconds = item
+    async def analyze_batch(
+        batch: list[tuple[Path, str, str | None, float | None]],
+    ) -> list[SlideAnalysis]:
         async with semaphore:
-            return await service.analyze_image(
-                client=client,
-                image_path=image_path,
-                context_text=context_text,
+            if len(batch) == 1:
+                # Single-image path — use the original per-image method
+                item = batch[0]
+                image_path, context_text, timecode, timecode_seconds = item
+                result = await service.analyze_image(
+                    image_path=image_path,
+                    context_text=context_text,
+                    system_prompt=input.system_prompt,
+                    global_context=input.global_context,
+                    config=config,
+                    timecode=timecode,
+                    timecode_seconds=timecode_seconds,
+                )
+                return [result]
+            return await service.analyze_image_batch(
+                items=batch,
                 system_prompt=input.system_prompt,
                 global_context=input.global_context,
                 config=config,
-                timecode=timecode,
-                timecode_seconds=timecode_seconds,
             )
 
-    analyses = await asyncio.gather(*[analyze_one(item) for item in work_items])
+    batch_results = await asyncio.gather(*[analyze_batch(b) for b in batches])
+    analyses = [slide for batch in batch_results for slide in batch]
 
-    total_tokens = sum(
-        a.token_usage.get("total_tokens", 0) for a in analyses
-    )
+    total_tokens = sum(a.token_usage.get("total_tokens", 0) for a in analyses)
 
-    logger.info(
-        f"VisionAnalyzeBatch: Completed — {n} slides, {total_tokens} total tokens"
-    )
+    logger.info(f"VisionAnalyzeBatch: Completed — {n} slides, {total_tokens} total tokens")
 
     return VisionAnalyzeBatchOutput(
         analyses=list(analyses),
@@ -135,8 +156,8 @@ async def run(
         status="success",
         metadata={
             "concurrency": config.concurrency,
-            "detail": config.detail,
-            "max_tokens_per_image": config.max_tokens,
+            "batch_size": config.batch_size,
+            "batches": len(batches),
             "had_manifest": bool(manifest),
             "had_segments": bool(segments),
             "had_transcript": bool(input.transcript),

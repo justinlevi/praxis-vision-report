@@ -17,6 +17,7 @@ def register() -> dict:
         "tasks": {
             "vision_analyze_batch": "praxis_vision_report.tasks.vision_analyze_batch",
             "compile_vision_report": "praxis_vision_report.tasks.compile_vision_report",
+            "audit_html_report": "praxis_vision_report.tasks.audit_html_report",
         },
         "pipelines": {
             "gtc_session_writeup": "praxis_vision_report.pipelines.gtc_session_writeup",

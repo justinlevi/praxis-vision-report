@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CompileVisionReportInput(BaseModel):
@@ -19,11 +19,12 @@ class CompileVisionReportInput(BaseModel):
         None, description="Optional metadata: speaker, date, level, topic, etc."
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "semantic_type": "vision_analyses",
             "compatible_with": ["analysis_collection", "report_input"],
         }
+    )
 
 
 class CompileVisionReportOutput(BaseModel):
@@ -44,19 +45,35 @@ class CompileVisionReportOutput(BaseModel):
         default_factory=dict, description="Execution metadata"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "semantic_type": "vision_report",
             "compatible_with": ["report", "markdown", "html"],
         }
+    )
 
 
 class CompileVisionReportConfig(BaseModel):
     """Configuration for compile_vision_report task."""
 
     model: str = Field(
-        default="gpt-5.4",
-        description="OpenAI model to use for synthesis",
+        default="claude-sonnet-4-6",
+        description="Claude model to use for synthesis",
+    )
+    use_map_reduce: bool = Field(
+        default=False,
+        description="Use map-reduce synthesis for large slide sets (recommended for >30 slides)",
+    )
+    map_reduce_threshold: int = Field(
+        default=30,
+        ge=5,
+        description="Slide count at which map-reduce is automatically used (when use_map_reduce=True)",
+    )
+    map_reduce_chunk_size: int = Field(
+        default=10,
+        ge=3,
+        le=20,
+        description="Slides per chunk in the map phase",
     )
     output_formats: list[str] = Field(
         default_factory=lambda: ["markdown", "html"],

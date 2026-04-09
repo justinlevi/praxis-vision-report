@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class VisionAnalyzeBatchInput(BaseModel):
@@ -44,11 +44,12 @@ class VisionAnalyzeBatchInput(BaseModel):
             raise ValueError("Either image_paths or images_dir must be provided")
         return self
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "semantic_type": "image_batch",
             "compatible_with": ["image_collection", "file_path", "vision"],
         }
+    )
 
 
 class SlideAnalysis(BaseModel):
@@ -80,35 +81,52 @@ class VisionAnalyzeBatchOutput(BaseModel):
         default_factory=dict, description="Execution metadata"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "semantic_type": "vision_analysis_batch",
             "compatible_with": ["analysis_collection", "slides"],
         }
+    )
 
 
 class VisionAnalyzeBatchConfig(BaseModel):
     """Configuration for batch vision analysis."""
 
     model: str = Field(
-        default="gpt-5.4",
-        description="Vision model to use",
-        examples=["gpt-5.4", "gpt-4o", "gpt-4-vision-preview"],
-    )
-    detail: str = Field(
-        default="high",
-        description="Image detail level for the vision API",
-        examples=["low", "high", "auto"],
-    )
-    max_tokens: int = Field(
-        default=2048,
-        description="Maximum tokens per image analysis",
-        ge=256,
-        le=16384,
+        default="claude-sonnet-4-6",
+        description="Claude model to use for vision analysis",
+        examples=["claude-sonnet-4-6", "claude-opus-4-6"],
     )
     concurrency: int = Field(
         default=5,
-        description="Maximum concurrent API calls",
+        description="Maximum concurrent claude -p calls",
         ge=1,
         le=20,
+    )
+    batch_size: int = Field(
+        default=1,
+        description=(
+            "Number of slides to analyze per claude -p call. "
+            "batch_size=1 sends one image per call (original behavior). "
+            "batch_size=10 groups 10 slides into a single call, reducing subprocess overhead."
+        ),
+        ge=1,
+        le=20,
+    )
+    min_slide_interval_seconds: float = Field(
+        default=0.0,
+        description=(
+            "Minimum seconds between consecutive slides. "
+            "Slides closer together than this are dropped (keeps the first). "
+            "0.0 disables the filter. Recommended: 15.0 for conference talks."
+        ),
+        ge=0.0,
+    )
+    filter_stage_shots: bool = Field(
+        default=False,
+        description=(
+            "When True, removes 'presenter on stage' shots before analysis. "
+            "Detects wide-angle audience-view frames (bright backdrop, lit audience bottom) "
+            "using OpenCV. Requires opencv-python-headless."
+        ),
     )

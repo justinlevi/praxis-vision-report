@@ -1,0 +1,9 @@
+task_id: refine_html_report
+name: Refine HTML Report
+description: "Rewrite a blog-style report using editorial critique — full prose rewrite with only value-adding images, saves *-refined.md and *-refined.html"
+category: transform
+version: "0.1.0"
+input_schema: RefineHtmlReportInput
+output_schema: RefineHtmlReportOutput
+config_schema: RefineHtmlReportConfig
+tags: [refine, html, markdown, editorial, claude, anthropic, rewrite]
